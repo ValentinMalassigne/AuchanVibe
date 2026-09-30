@@ -25,6 +25,19 @@ Justifications des choix non évidents et constats utiles au projet.
 
 ## Constats sur le serveur MCP (compléments à AUDIT-MCP.md)
 
+- **Tests amont partiellement rouges (constat 2026-09-30)** : 182/185 passent. Les 3
+  échecs (unit + integration) portent uniquement sur le drapeau `available` de
+  `get_favorites` : le parser calcule la disponibilité depuis `data-stock > 0` (choix
+  documenté dans le code, plus fiable que l'ancien `quantity-selector`), mais les
+  fixtures de test n'ont pas d'attribut `data-stock`. Ce sont donc des tests périmés
+  côté amont, pas une régression. Hors de notre pipeline (get_favorites non utilisé) :
+  accepté sans fix. À reprendre avant d'activer `get_favorites`, sinon on risquerait de
+  se fier à un drapeau de disponibilité jamais validé.
+- **Drive : pas besoin d'AUCHAN_STORE_ID** : le serveur n'utilise pas l'état `set_store`
+  dans ses requêtes HTTP ; le drive appliqué est celui du compte Auchan, porté par les
+  cookies de session. L'ID (`find_stores` → `set_store`, ou `AUCHAN_STORE_ID`) ne sert
+  qu'au suivi interne du MCP (dont l'invalidation du cache de recherche). Le smoke test
+  peut donc tourner avec l'ID du README sans fausser les opérations panier.
 - **Aucune étape paiement côté serveur** : le serveur n'expose aucune commande de
   checkout, créneau ou paiement. Le « l'agent prépare, l'humain valide et paie » n'est
   donc pas seulement une règle de prompt, c'est la réalité du périmètre technique.
@@ -40,6 +53,14 @@ Justifications des choix non évidents et constats utiles au projet.
   (ids offer/seller manquants). Vider le cache sur changement de drive est voulu.
 - **Sous-projet `tools/ollama-mcp-bridge/`** : présent dans le clone, non utilisé ni
   audité. Ne pas l'exécuter.
+
+## Références du compte
+
+- **Drive de l'utilisateur : Auchan Villebon-sur-Yvette — ID
+  `954c033f-e4a4-a7a4-dc49-fc385d09d384`** (trouvé via `SMOKE_QUERY` + étape 1 du smoke
+  test, vérifié par l'utilisateur dans le HTML de la page du site). Sert pour les smoke
+  tests manuels (`AUCHAN_STORE_ID=… npm run smoke`) ; les runs courses n'en ont pas
+  besoin (le drive du compte fait foi, voir constat ci-dessus).
 
 ## Maintenance
 

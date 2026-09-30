@@ -112,8 +112,13 @@ Le script n'analyse rien lui-même, ne touche pas aux cookies, et ne lance rien 
 
 ### 6.1 Déroulé d'un run (workflow imposé)
 
-1. `auchan_get_store` : vérifier qu'un drive est actif. Si aucun → stop avec un message
-   clair (l'utilisateur sélectionne son drive dans son compte Auchan au préalable).
+1. `auchan_get_cart` : vérifier que la session est fonctionnelle. C'est la vraie
+   précondition : le drive utilisé est celui du compte Auchan, porté par la session (le
+   serveur MCP ne l'utilise pas dans ses requêtes). Si échec d'authentification → stop
+   avec un message clair (se reconnecter sur auchan.fr dans Chrome).
+   `auchan_get_store` peut être appelé à titre informatif, mais son état (fichier
+   `set_store`) n'est que du suivi interne du MCP : il ne doit jamais déclencher un
+   `set_store` ni arrêter le run.
 2. `auchan_get_cart` : capturer l'état initial du panier (pour le rapport, et pour ne pas
    toucher aux lignes existantes).
 3. Pour chaque ligne de `courses.txt` : `auchan_search_product` → choisir le produit →

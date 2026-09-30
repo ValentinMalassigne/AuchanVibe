@@ -24,13 +24,12 @@ Plan ordonné du projet. L'agent suit cet ordre et coche les cases au fil de l'a
 
 - [x] Fichiers de projet créés : `AGENTS.md`, `PROJECT_CONTEXT.md`, `PLAN.md`, `NOTES.md`,
       `AUDIT-MCP.md`, `README.md`
-- [ ] **(toi)** `git init` à la racine + premier commit des fichiers de projet
-      (l'utilisateur décide d'y inclure ou non `courses.txt`)
-- [ ] **(toi)** Node.js ≥ 20.19 installé (`node --version`)
-- [ ] `cd mcp-auchan-drive && npm install && npm run build` : `dist/index.js` produit
-- [ ] **(toi)** Session Chrome connectée à `www.auchan.fr`, drive sélectionné dans le
+- [x] **(toi)** `git init` à la racine + premier commit des fichiers de projet
+- [x] **(toi)** Node.js ≥ 20.19 installé (`node --version` → v24.13.1)
+- [x] `cd mcp-auchan-drive && npm install && npm run build` : `dist/index.js` produit
+- [x] **(toi)** Session Chrome connectée à `www.auchan.fr`, drive sélectionné dans le
       compte, au moins une visite récente du site (cookie `datadome`)
-- [ ] Checkpoint
+- [x] Checkpoint
 
 ## Phase 1 — Audit initial du serveur MCP
 
@@ -38,11 +37,14 @@ Plan ordonné du projet. L'agent suit cet ordre et coche les cases au fil de l'a
       exec — verdict et détail dans `AUDIT-MCP.md`
 - [x] Résumé fonctionnel (outils disponibles) et fonctionnement archi écrits dans
       `AUDIT-MCP.md` et communiqués à l'utilisateur
-- [ ] `cd mcp-auchan-drive && npm run typecheck && npm test` : verts sur le clone
-- [ ] **(toi)** Smoke test optionnel du serveur seul :
-      `cd mcp-auchan-drive && AUCHAN_STORE_ID=<ton-drive> npm run smoke` (utilise le vrai
-      compte ; peut être sauté)
-- [ ] Checkpoint
+- [x] `cd mcp-auchan-drive && npm run typecheck && npm test` : typecheck vert ;
+      tests 182/185 — 3 échecs confinés au drapeau `available` de `get_favorites`,
+      causés par des tests périmés (fixtures sans `data-stock` alors que le parser
+      exige `data-stock > 0`). Hors pipeline courses, décision : accepté tel quel
+      (voir NOTES.md). À reprendre si `get_favorites` entre dans le scope.
+- [x] **(toi)** Smoke test du serveur seul : 8/8 étapes réussies (recherche, promos,
+      add/update/remove cart) avec l'ID de drive du README comme contexte
+- [x] Checkpoint
 
 ## Phase 2 — Configuration Vibe
 
@@ -106,3 +108,12 @@ Blocages, questions pour l'utilisateur, décisions. Une ligne chacune, plus réc
   projet (séance du 2026-09-30), d'où les cases déjà cochées à la Phase 1.
 - `COMPATIBILITY.md` n'est pas créé : pas de cible de compatibilité navigateur dans ce
   projet. Son équivalent « journal vivant » est `AUDIT-MCP.md` (suivi du code tiers).
+- Phase 1 : les 3 tests en échec portent sur `available` de `get_favorites`. Le parser
+  exige `data-stock > 0` (choix documenté dans son code) ; les fixtures de test n'ont pas
+  d'attribut `data-stock` du tout. Tests périmés côté amont, hors de notre pipeline :
+  accepté sans fix. À reprendre avant toute utilisation de `get_favorites`.
+- Phase 1 : le smoke test a utilisé l'ID de drive du README (Lyon/Caluire). Le drive du
+  compte utilisateur reste la référence pour le pipeline (porté par la session) ;
+  `AUCHAN_STORE_ID` n'est pas nécessaire pour les runs courses.
+- Décision (2026-09-30) : le test de disponibilité « quantity-selector » a été remplacé
+  côté parser par `data-stock`, plus fiable selon le commentaire du code amont.
