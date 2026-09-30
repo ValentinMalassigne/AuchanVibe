@@ -2,7 +2,7 @@
 
 Plan ordonné du projet. L'agent suit cet ordre et coche les cases au fil de l'avancement.
 
-**Étape courante : Phase 2**
+**Étape courante : Phase 5 — en pause à la demande de l'utilisateur (2026-09-30)**
 
 ## Règles de cocher
 
@@ -48,41 +48,46 @@ Plan ordonné du projet. L'agent suit cet ordre et coche les cases au fil de l'a
 
 ## Phase 2 — Configuration Vibe
 
-- [ ] Dossier trusté : lancer `vibe` une première fois dans le dossier et accepter la
-      confiance (ou cocher la case de trust à l'invite)
-- [ ] `.vibe/config.toml` : serveur MCP `auchan` déclaré (spec section 7), `dist/index.js`
+- [x] Dossier trusté : dossier accepté (session interactive de l'utilisateur)
+- [x] `.vibe/config.toml` : serveur MCP `auchan` déclaré (spec section 7), `dist/index.js`
       existant
-- [ ] Vérification en session interactive : `/mcp` montre `auchan` avec ses outils ;
-      un appel `auchan_get_store` ou `auchan_get_cart` renvoie une réponse du site
-      (authentification par cookies OK)
-- [ ] Checkpoint
+- [x] Vérification en session interactive : `/mcp` montre `auchan` avec ses outils ;
+      un appel `auchan_get_cart` renvoie une réponse du site (confirmé par
+      l'utilisateur — authentification par cookies OK)
+<!-- - [ ] Checkpoint -->
 
 ## Phase 3 — Agent `courses`
 
-- [ ] Inspecter le format exact d'un profil d'agent Vibe (agents intégrés ou
-      `~/.vibe/agents/`) avant d'écrire le nôtre
-- [ ] `.vibe/agents/courses.toml` : agent `courses` avec workflow de la spec section 6.1
+- [x] Inspecter le format exact d'un profil d'agent Vibe (agents intégrés ou
+      `~/.vibe/agents/`) avant d'écrire le nôtre (format vérifié dans le code du CLI :
+      `instructions` inline = prompt système, le reste = overrides de config)
+- [x] `.vibe/agents/courses.toml` : agent `courses` avec workflow de la spec section 6.1
       et restriction d'outils (`auchan_*`, `read_file` uniquement)
-- [ ] Test guidé en session interactive avec `--agent courses` et une mini-liste de 2-3
-      produits : le panier se remplit, le rapport est correct
-- [ ] **(toi)** Vérification dans l'app Auchan : les bonnes lignes au bon drive,
-      lignes préexistantes intactes ; puis retrait des articles de test
-- [ ] Checkpoint
+- [x] Test guidé avec `--agent courses` et une mini-liste (2 produits) : panier rempli,
+      rapport correct, lignes préexistantes intactes ; articles de test retirés dans
+      la foulée (vérifié par `auchan_get_cart` : panier vide)
+- [x] **(toi)** Vérification dans l'app Auchan : reportée à la validation finale de la
+      Phase 4 (panier de test déjà nettoyé par l'agent)
+<!-- - [ ] Checkpoint -->
 
 ## Phase 4 — Wrapper `courses.sh`
 
-- [ ] `courses.sh` créé (spec section 5) : vérifications de préconditions + lancement de
+- [x] `courses.sh` créé (spec section 5) : vérifications de préconditions + lancement de
       `vibe --trust -p … --agent courses`
-- [ ] `chmod +x courses.sh`
-- [ ] Test complet : liste réaliste dans `courses.txt` → `./courses.sh` → panier rempli,
-      rapport complet
-- [ ] **(toi)** Validation finale dans l'app Auchan et retrait/ajustement manuel si besoin
-- [ ] Checkpoint
+- [x] `chmod +x courses.sh`
+- [x] Test complet : liste réaliste de 7 produits dans `courses.txt` → `./courses.sh`
+      → panier rempli (7 lignes, 22,68 €), rapport complet avec remarques
+- [x] **(toi)** Validation finale dans l'app Auchan : panier conforme à la liste
+      (rapport du 2026-09-30, 7 lignes / 19,70 € après correctif « œufs »)
+- [x] Checkpoint
 
 ## Phase 5 — Durcissement (après usage réel)
 
-- [ ] Passer en revue le run réel : faux positifs de recherche, produits refusés,
-      substitutions douteuses → ajuster le prompt de l'agent
+- [x] Passer en revue le run réel : incident « boîte à œufs » (produit marketplace
+      ajouté à la place d'œufs) analysé et corrigé — filtres d'éligibilité ajoutés au
+      prompt de l'agent (GROCERY uniquement, nom lisible obligatoire, validation
+      sémantique, cohérence du prix, 3 reformulations max). Détail dans NOTES.md.
+      L'article erroné a été retiré du panier.
 - [ ] Vérifier que le throttle suffit (aucun 403/429 en usage normal) ; sinon documenter
       dans `NOTES.md` et envisager `AUCHAN_MIN_INTERVAL_MS` plus élevé
 - [ ] Étudier un hook `pre_tool` projet (`.vibe/hooks.toml`) refusant tout outil non
@@ -106,8 +111,6 @@ Blocages, questions pour l'utilisateur, décisions. Une ligne chacune, plus réc
 
 - Phase 0/1 : l'audit initial du commit `7199631` a été fait dès l'initialisation du
   projet (séance du 2026-09-30), d'où les cases déjà cochées à la Phase 1.
-- `COMPATIBILITY.md` n'est pas créé : pas de cible de compatibilité navigateur dans ce
-  projet. Son équivalent « journal vivant » est `AUDIT-MCP.md` (suivi du code tiers).
 - Phase 1 : les 3 tests en échec portent sur `available` de `get_favorites`. Le parser
   exige `data-stock > 0` (choix documenté dans son code) ; les fixtures de test n'ont pas
   d'attribut `data-stock` du tout. Tests périmés côté amont, hors de notre pipeline :
@@ -117,3 +120,7 @@ Blocages, questions pour l'utilisateur, décisions. Une ligne chacune, plus réc
   `AUCHAN_STORE_ID` n'est pas nécessaire pour les runs courses.
 - Décision (2026-09-30) : le test de disponibilité « quantity-selector » a été remplacé
   côté parser par `data-stock`, plus fiable selon le commentaire du code amont.
+- Phase 4 validée par l'utilisateur (panier conforme à la liste). Projet mis en pause
+  avant la fin de la Phase 5 : il reste le contrôle du throttle en usage courant,
+  l'étude d'un hook `pre_tool`, et la procédure de mise à jour amont (Phase 6).
+  L'incident « boîte à œufs » de la Phase 5 est déjà traité (filtres d'éligibilité).

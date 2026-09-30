@@ -4,6 +4,18 @@ Justifications des choix non évidents et constats utiles au projet.
 
 ## Choix de conception
 
+- **`bypass_tool_permissions = true` dans le profil `courses`** : le wrapper tourne en
+  mode `-p` headless, où aucune approbation interactive n'est possible ; sans bypass,
+  chaque appel d'outil échouerait. C'est acceptable parce que la surface d'outils du
+  profil est une whitelist stricte (`auchan_*` + `read_file`) et que le code du serveur
+  est audité (`AUDIT-MCP.md`). On n'utilise pas `--yolo`/`--auto-approve` en ligne de
+  commande : le bypass est borné au profil restreint.
+- **Format du profil d'agent Vibe** (vérifié dans le code du CLI) : nom = nom de
+  fichier ; clés `display_name`, `description`, `safety` (`safe`/`neutral`/
+  `destructive`/`smart`/`yolo`), `agent_type`, `instructions` (prompt système inline,
+  prioritaire sur `system_prompt_id`) ; toute autre clé devient un override de config
+  (`enabled_tools`, `bypass_tool_permissions`…). Les globs fonctionnent dans
+  `enabled_tools` : `auchan_*` couvre les outils du serveur MCP.
 - **Chrome, pas Firefox** : l'utilisateur a sa session Auchan dans Chrome (profil
   `Default`). C'est le défaut du serveur MCP, aucune variable `AUCHAN_*` n'est donc
   nécessaire. Les modes Firefox (`AUCHAN_BROWSER=firefox`) et cookie manuel
@@ -25,6 +37,28 @@ Justifications des choix non évidents et constats utiles au projet.
 
 ## Constats sur le serveur MCP (compléments à AUDIT-MCP.md)
 
+- **Incident « boîte à œufs » (Phase 4, corrigé)** : la demande « 6 oeufs » a abouti à
+  l'ajout d'une boîte à œufs en plastique (marketplace, livrée séparément) au lieu
+  d'œufs alimentaires. Enchaînement des causes :
+  1. la recherche « oeufs »/« oeuf »/« œufs » renvoie **0 résultat** (quirk de
+     l'API Auchan) ; « boîte de 6 oeufs » ne renvoyait que des produits marketplace ;
+  2. le seul résultat exploitable était sans nom lisible, et l'agent l'a ajouté sans
+     pouvoir vérifier la correspondance sémantique ;
+  3. le produit était `sellerType: ONLINE` (marketplace) alors que les produits du
+     drive sont `sellerType: GROCERY` — donnée disponible mais non exploitée.
+  Correctifs installés dans le prompt de l'agent (filtres d'éligibilité : GROCERY
+  uniquement, nom obligatoire, validation sémantique, cohérence du prix, 3
+  reformulations max). La recherche « oeufs frais » trouve bien des œufs drive.
+  Si des échecs similaires réapparaissent, monter le garde-fou dans le code du serveur
+  MCP (filtrer `sellerType` au niveau du parser, branche locale + PR amont).
+- **Recherche : quirks de l'API Auchan** : certains termes usuels renvoient 0 résultat
+  sans erreur (« oeufs » dans toutes ses graphies). Toujours reformuler avec un terme
+  plus spécifique avant de conclure « introuvable ». L'agent le sait (3 recherches max
+  par ligne).
+- **Panier sans noms** : `GET /cart` ne renvoie pas les noms des articles et le
+  `cart-mapper` du serveur met `label: ''` (limite documentée dans son code). Les
+  rapports identifient donc les lignes du panier par `productId`. Amélioration
+  possible côté serveur : enrichir via la page de recherche ou l'API produit.
 - **Tests amont partiellement rouges (constat 2026-09-30)** : 182/185 passent. Les 3
   échecs (unit + integration) portent uniquement sur le drapeau `available` de
   `get_favorites` : le parser calcule la disponibilité depuis `data-stock > 0` (choix
@@ -41,6 +75,11 @@ Justifications des choix non évidents et constats utiles au projet.
 - **Aucune étape paiement côté serveur** : le serveur n'expose aucune commande de
   checkout, créneau ou paiement. Le « l'agent prépare, l'humain valide et paie » n'est
   donc pas seulement une règle de prompt, c'est la réalité du périmètre technique.
+- **Produits sans libellé** (constat Phase 4, 2026-09-30) : certains résultats de
+  recherche renvoient un produit sans nom lisible (cas vu : une boîte de 6 œufs).
+  Le prix affiché par la recherche peut différer du prix réellement facturé au panier
+  (6,99 € affiché contre 5,99 € facturé dans ce cas). L'agent le signale dans le
+  rapport ; point à surveiller en Phase 5.
 - **Disponibilité trompeuse** : le flag `available` de la recherche reflète le
   catalogue national, pas le stock du drive ; une rupture n'apparaît qu'à l'ajout
   (le serveur le détecte et le remonte explicitement).

@@ -1,0 +1,5 @@
+[[mcp_servers]]
+name = "auchan"
+transport = "stdio"
+command = "node"
+args = ["/Users/valentin/Code/Tests/AuchanVibe/mcp-auchan-drive/dist/index.js"]

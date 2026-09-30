@@ -121,8 +121,18 @@ Le script n'analyse rien lui-même, ne touche pas aux cookies, et ne lance rien 
    `set_store` ni arrêter le run.
 2. `auchan_get_cart` : capturer l'état initial du panier (pour le rapport, et pour ne pas
    toucher aux lignes existantes).
-3. Pour chaque ligne de `courses.txt` : `auchan_search_product` → choisir le produit →
-   `auchan_add_to_cart`. Si refus (rupture drive) : chercher un équivalent, sinon
+3. Pour chaque ligne de `courses.txt` : `auchan_search_product` → **filtrer** → choisir
+   le produit → `auchan_add_to_cart`. Filtres d'éligibilité (un produit qui en viole un
+   seul n'est jamais ajouté) :
+   - `sellerType` = `GROCERY` uniquement (jamais de produit marketplace `ONLINE` :
+     livraison séparée, hors périmètre drive) ;
+   - nom présent et lisible dans le résultat (sans nom, pas de validation possible) ;
+   - le nom désigne l'article demandé lui-même, pas un accessoire ni un autre produit
+     mentionnant le terme (leçon de l'incident « boîte à œufs », voir NOTES.md) ;
+   - prix cohérent avec la nature de l'article.
+   Si aucun résultat éligible : reformuler la recherche (max 3 recherches par ligne,
+   termes alimentaires plus précis, ex. « oeufs » → « oeufs frais »), sinon marquer
+   introuvable. Si l'ajout est refusé (rupture drive) : un équivalent proche, sinon
    signaler.
 4. `auchan_get_cart` final : vérifier le contenu et le total.
 5. Rapport final (dans la sortie standard) : ajoutés / introuvables / substitutions /
@@ -135,6 +145,8 @@ Le script n'analyse rien lui-même, ne touche pas aux cookies, et ne lance rien 
   d'agent si le format le permet, sinon via la ligne de commande du wrapper
   (`--enabled-tools`) et la relecture du format d'agent au moment de l'implémenter.
 - Ne jamais appeler `auchan_debug_page_html` en usage normal (outil de diagnostic).
+- Ne jamais ajouter de produit marketplace (`sellerType` ≠ `GROCERY`), ni de produit au
+  nom absent/illisible ou sémantiquement non conforme à la demande.
 - Les erreurs d'un produit n'arrêtent pas le run : le run continue et le rapport liste
   les échecs.
 - Un run ne doit pas dépasser la liste : pas de « panier complet » ni de suggestions
